@@ -1,0 +1,14 @@
+Flag Anonymous Redirect
+
+1. Introduction
+
+Flag Anonymous Redirect is a Drupal Module that complements existing Flag module (version1).
+It displays the flag link to anonymous users as well, but instead of actual flagging, it 
+redirects them to user/login page.
+
+Flag Anonymous Redirect displays flagging links in both nodeview, teaserview pages as well as
+any views.
+
+2. Install
+
+@TODO
