@@ -1,0 +1,5 @@
+name = Flag Anonymous Redirect
+description = "Allow flag this link to redirect to user login."
+package = "Cellroti"
+core = 6.x
+dependencies[] = flag

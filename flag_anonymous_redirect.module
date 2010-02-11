@@ -1,0 +1,147 @@
+<?php
+
+/**
+ * @todo Add help and other setting later
+ */
+
+/**
+ * Alters flag_form (form used during flag creation / edit) and provided two 
+ * new options
+ * 
+ * a. Show anonymous redirect links in teaser view
+ * b. Show anonymous redirect links in node view
+ * 
+ * Appends a custom submit function to save in database.
+ */
+function flag_anonymous_redirect_form_flag_form_alter(&$form, $form_state) {
+  $flag_id = $form['#flag']->fid;
+  $name_teaser = "flag_anonymous_redirect_" . $flag_id . "_teaser";
+  $name_node =  "flag_anonymous_redirect_" . $flag_id . "_node";
+  $form['display']['anonymous_redirect_teaser'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Redirect to User Login for Anonymous User on Teaser view'),
+    '#default_value' => variable_get($name_teaser, 0),
+  );
+  $form['display']['anonymous_redirect_node'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Redirect to User Login for Anonymous User on Node view'),
+    '#default_value' => variable_get($name_node, 0),
+  );
+  $form['#submit'][] = 'flag_anonymous_redirect_form_flag_submit';
+}
+
+/**
+ * Custom submit function, acts as a callback for submit action for
+ * flag_form
+ * 
+ */
+function flag_anonymous_redirect_form_flag_submit(&$form, $form_state) {
+  $flag_id = $form['#flag']->fid;
+  $name_teaser = "flag_anonymous_redirect_" . $flag_id . "_teaser";
+  $name_node =  "flag_anonymous_redirect_" . $flag_id . "_node";
+  variable_set($name_teaser, $form['#post']['anonymous_redirect_teaser']);
+  variable_set($name_node, $form['#post']['anonymous_redirect_node']);
+}
+
+/**
+ * Implementaiton of hook_theme()
+ * @return array 
+ */
+function flag_anonymous_redirect_theme() {
+  return array(
+    'flag_anonymous_redirect_flag' => array(
+      'arguments' => array('flag' => NULL, 'action' => NULL, 'content_id' => NULL, 'after_flagging' => FALSE),
+      'template' => 'flag_anonymous_redirect_flag', 
+    ),
+  );
+}
+
+/**
+ * A preprocess function for our theme('flag_anonymous_redirect_flag'). It generates the
+ * variables needed there.
+ *
+ * The $variables array initially contains the following arguments:
+ * - $flag
+ * - $action
+ * - $content_id
+ * - $after_flagging
+ *
+ * See 'flag.tpl.php' for their documentation.
+ * See template_preprocess_flag for proper documentation
+ *
+ * Note: The Drupal 5 version of this module calls this function directly.
+ */
+function template_preprocess_flag_anonymous_redirect_flag(&$variables) {
+  
+  $flag =& $variables['flag'];
+
+  $variables['flag_name_css'] = str_replace('_', '-', $flag->name);
+  $link = url('user/login', array('query' => drupal_get_destination()));
+  $variables['link_href'] = check_url($link);
+  $variables['flag_classes_array'][] = 'flag';
+  $variables['flag_classes_array'][] = 'flag-link-'. $flag->link_type;
+  $variables['flag_classes'] = implode(' ', $variables['flag_classes_array']);
+  $variables['link_title'] = $flag->flag_long;
+
+}
+
+/**
+ * Add links for the Anonymous users..
+ * Implementation of hook_links
+ * 
+ * @param unknown_type $type
+ * @param unknown_type $object
+ * @param unknown_type $teaser
+ * @return unknown_type
+ */
+function flag_anonymous_redirect_link($type, $object, $teaser = FALSE) {
+  global $user;
+  if ($user->uid) {
+    return;
+  }
+  if ('node' == $type) { 
+    $flags = flag_get_flags($type, $object->type);
+    foreach ($flags as $flag) {
+      
+      // Check if flag is set to display
+      $variable_name = "flag_anonymous_redirect_" . $flag->fid . (($teaser)?"_teaser":"_node");
+      $active = variable_get($variable_name, 0);
+      if ($active) {
+        $links['flag-'. $flag->name] = array(
+          'title' => theme('flag_anonymous_redirect_flag', $flag),
+          'html' => TRUE,
+//          'description' => $flag->flag_long,
+          'attributes' => array('title' => t('Login to ' . $flag->flag_long)),
+        );
+      }
+    }
+     
+    if (isset($links)) {
+      return $links;
+    }
+  }
+}
+
+function flag_anonymous_redirect_flag_enabled($flag, $type = 'node') {
+  $variable_name = "flag_anonymous_redirect_" . $flag->fid . "_" . $type;
+  return variable_get($variable_name, 0);
+}
+/**
+ * Implementaiton of hook_views_api()
+ * @return array mention we use version 2 of views api
+ */
+function flag_anonymous_redirect_views_api() {
+  return array(
+    'api' => 2,
+  );
+}
+
+/**
+ * @todo
+ * No Idea what is being done by following code, but somehow it glues what is required
+ * @param unknown_type $data
+ * @return unknown_type
+ */
+function flag_anonymous_redirect_views_data_alter(&$data) {
+    $data['flag_content']['ops']['field']['handler'] = 'flag_anonymous_redirect_handler_field_flag_override';
+}
